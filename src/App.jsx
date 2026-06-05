@@ -876,15 +876,25 @@ export default function Synthesize() {
   const [view, setView] = useState("landing");
   const [scrolled, setScrolled] = useState(false);
 
+  // ✅ useEffect MUST be before any conditional return
+  useEffect(() => {
+    if (!user) return; // skip adding listener if not authed
+    const handler = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
+  }, [user]);
+
+  // Auth gate — AFTER all hooks
   if (!user) {
     return <AuthScreen onAuth={(u) => setUser(u)} />;
   }
 
-  useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", handler);
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
+  const handleSignOut = () => {
+    setCurrentUser(null);
+    setUser(null);
+    setView("landing");
+    setScrolled(false);
+  };
 
   return (
     <div style={{ fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif", background: "#080808", color: "#e5e7eb", minHeight: "100vh" }}>
@@ -907,23 +917,17 @@ export default function Synthesize() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {view !== "landing" && (
-            <button onClick={() => setView("landing")} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "8px", color: "#aaa", padding: "7px 16px", fontSize: "13px", cursor: "pointer" }}>
-              ← Back
-            </button>
+            <button onClick={() => setView("landing")} style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "8px", color: "#aaa", padding: "7px 16px", fontSize: "13px", cursor: "pointer" }}>← Back</button>
           )}
           {view === "landing" && (
-            <button onClick={() => setView("studio")} style={{ background: "#4f46e5", border: "none", borderRadius: "8px", color: "#fff", padding: "8px 20px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
-              Open Studio →
-            </button>
+            <button onClick={() => setView("studio")} style={{ background: "#4f46e5", border: "none", borderRadius: "8px", color: "#fff", padding: "8px 20px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Open Studio →</button>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#1a1a1a", border: "1px solid #222", borderRadius: "8px", padding: "5px 10px 5px 8px" }}>
             <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: "linear-gradient(135deg, #4f46e5, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "#fff", flexShrink: 0 }}>
               {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
             </div>
             <span style={{ fontSize: "12px", color: "#aaa", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name || user.email}</span>
-            <button onClick={() => { setCurrentUser(null); setUser(null); }} style={{ background: "none", border: "none", color: "#555", fontSize: "11px", cursor: "pointer", padding: "0 0 0 4px", borderLeft: "1px solid #2a2a2a", marginLeft: "2px", paddingLeft: "8px" }}>
-              Sign out
-            </button>
+            <button onClick={handleSignOut} style={{ background: "none", border: "none", color: "#555", fontSize: "11px", cursor: "pointer", borderLeft: "1px solid #2a2a2a", marginLeft: "2px", paddingLeft: "8px" }}>Sign out</button>
           </div>
         </div>
       </nav>
@@ -949,17 +953,13 @@ export default function Synthesize() {
                 Describe your app in plain English. Synthesize compiles it into a validated spec with auth, data schema, pages, and a live preview — in seconds.
               </p>
               <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={() => setView("studio")} style={{ background: "#4f46e5", border: "none", borderRadius: "10px", color: "#fff", padding: "14px 32px", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  Start Building ✦
-                </button>
-                <button style={{ background: "transparent", border: "1px solid #2a2a2a", borderRadius: "10px", color: "#888", padding: "14px 24px", fontSize: "15px", cursor: "pointer" }}>
-                  See examples →
-                </button>
+                <button onClick={() => setView("studio")} style={{ background: "#4f46e5", border: "none", borderRadius: "10px", color: "#fff", padding: "14px 32px", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>Start Building ✦</button>
+                <button style={{ background: "transparent", border: "1px solid #2a2a2a", borderRadius: "10px", color: "#888", padding: "14px 24px", fontSize: "15px", cursor: "pointer" }}>See examples →</button>
               </div>
             </div>
 
             {/* Demo card */}
-            <div style={{ maxWidth: "760px", margin: "60px auto 0", animation: "fadeUp 0.9s ease 0.2s both", position: "relative" }}>
+            <div style={{ maxWidth: "760px", margin: "60px auto 0", animation: "fadeUp 0.9s ease 0.2s both" }}>
               <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: "16px", overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
                 <div style={{ background: "#161616", borderBottom: "1px solid #1e1e1e", padding: "10px 16px", display: "flex", alignItems: "center", gap: "8px" }}>
                   <div style={{ display: "flex", gap: "5px" }}>
@@ -1027,7 +1027,7 @@ export default function Synthesize() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
               {FEATURE_CARDS.map((f) => (
-                <div key={f.title} style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: "12px", padding: "20px", transition: "border-color 0.2s", cursor: "default" }} onMouseEnter={(e) => e.currentTarget.style.borderColor = "#2a2a4a"} onMouseLeave={(e) => e.currentTarget.style.borderColor = "#1e1e1e"}>
+                <div key={f.title} style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: "12px", padding: "20px", transition: "border-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.borderColor = "#2a2a4a"} onMouseLeave={(e) => e.currentTarget.style.borderColor = "#1e1e1e"}>
                   <div style={{ fontSize: "24px", marginBottom: "12px" }}>{f.icon}</div>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#fff", marginBottom: "6px" }}>{f.title}</div>
                   <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.6 }}>{f.desc}</div>
@@ -1043,12 +1043,7 @@ export default function Synthesize() {
               <p style={{ color: "#9ca3af", fontSize: "15px" }}>A 4-pass compiler pipeline that validates every spec before rendering.</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              {[
-                ["01", "Describe", "Write a plain-English description of the app you want to build.", "#818cf8"],
-                ["02", "Compile", "Claude parses your description into a strict JSON spec with tables, pages, roles, and nav.", "#c084fc"],
-                ["03", "Validate", "4 compiler passes run: defaults, CRUD inference, role normalization, and semantic lint.", "#6ee7b7"],
-                ["04", "Preview", "A fully interactive app preview renders in your browser with real data, navigation, and role-based access.", "#fbbf24"],
-              ].map(([num, title, desc, color]) => (
+              {[["01","Describe","Write a plain-English description of the app you want to build.","#818cf8"],["02","Compile","Claude parses your description into a strict JSON spec with tables, pages, roles, and nav.","#c084fc"],["03","Validate","4 compiler passes run: defaults, CRUD inference, role normalization, and semantic lint.","#6ee7b7"],["04","Preview","A fully interactive app preview renders in your browser with real data, navigation, and role-based access.","#fbbf24"]].map(([num, title, desc, color]) => (
                 <div key={num} style={{ display: "flex", gap: "20px", padding: "20px 0", borderBottom: "1px solid #111" }}>
                   <div style={{ fontSize: "11px", fontWeight: 800, color, width: "24px", flexShrink: 0, paddingTop: "2px", opacity: 0.7 }}>{num}</div>
                   <div>
@@ -1063,15 +1058,9 @@ export default function Synthesize() {
           {/* CTA */}
           <section style={{ padding: "80px 32px", textAlign: "center" }}>
             <div style={{ maxWidth: "480px", margin: "0 auto" }}>
-              <h2 style={{ fontSize: "36px", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "16px" }}>
-                Ready to build?
-              </h2>
-              <p style={{ color: "#9ca3af", marginBottom: "32px", fontSize: "15px", lineHeight: 1.6 }}>
-                Open the studio and describe your first app. It takes less than 30 seconds.
-              </p>
-              <button onClick={() => setView("studio")} style={{ background: "#4f46e5", border: "none", borderRadius: "10px", color: "#fff", padding: "14px 40px", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>
-                Open Studio ✦
-              </button>
+              <h2 style={{ fontSize: "36px", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "16px" }}>Ready to build?</h2>
+              <p style={{ color: "#9ca3af", marginBottom: "32px", fontSize: "15px", lineHeight: 1.6 }}>Open the studio and describe your first app. It takes less than 30 seconds.</p>
+              <button onClick={() => setView("studio")} style={{ background: "#4f46e5", border: "none", borderRadius: "10px", color: "#fff", padding: "14px 40px", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>Open Studio ✦</button>
             </div>
           </section>
 
@@ -1082,7 +1071,6 @@ export default function Synthesize() {
           </footer>
         </>
       ) : (
-        /* Studio view */
         <div style={{ paddingTop: "24px" }}>
           <div style={{ padding: "0 32px 24px" }}>
             <h1 style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "6px" }}>
